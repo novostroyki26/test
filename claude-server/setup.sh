@@ -23,7 +23,7 @@ say "Проверяю, доступны ли с этого сервера Claude
 command -v curl >/dev/null || { apt-get update -qq && apt-get install -y -qq curl; }
 
 anth_code="$(curl -s -o /tmp/anth.txt --max-time 15 -w '%{http_code}' https://api.anthropic.com/v1/messages || true)"
-if [ "$anth_code" = "000" ] || [ "$anth_code" = "403" ] || grep -qi 'not allowed' /tmp/anth.txt 2>/dev/null; then
+if [ "$anth_code" = "000" ] || [ "$anth_code" = "403" ] || grep -qi 'request not allowed' /tmp/anth.txt 2>/dev/null; then
   cat /tmp/anth.txt 2>/dev/null; echo
   die "Claude (api.anthropic.com) недоступен с этого сервера (код $anth_code).
        Создайте сервер в другой стране (Нидерланды, Германия) и запустите скрипт там."
