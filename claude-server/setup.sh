@@ -65,13 +65,31 @@ done
 chown "$CUSER:$CUSER" "$CHOME/.profile" "$CHOME/.bashrc"
 
 # --- 2. Bun и Claude Code --------------------------------------------------
+# Из некоторых стран и дата-центров часть сайтов закрыта, поэтому у каждой
+# установки есть запасной источник.
 say "Ставлю Bun"
-asuser '[ -x ~/.bun/bin/bun ] || curl -fsSL https://bun.sh/install | bash >/dev/null'
-asuser '~/.bun/bin/bun --version'
+asuser '
+  [ -x ~/.bun/bin/bun ] && exit 0
+  if curl -fsSL --max-time 60 https://bun.sh/install -o /tmp/bun-install.sh; then
+    bash /tmp/bun-install.sh >/dev/null && exit 0
+  fi
+  echo "bun.sh недоступен, скачиваю Bun с GitHub"
+  mkdir -p ~/.bun/bin && cd /tmp &&
+    curl -fsSL --max-time 300 -o bun.zip https://github.com/oven-sh/bun/releases/latest/download/bun-linux-x64.zip &&
+    unzip -o -q bun.zip && mv -f bun-linux-x64/bun ~/.bun/bin/bun && chmod +x ~/.bun/bin/bun
+'
+asuser '~/.bun/bin/bun --version' || die "Не удалось установить Bun"
 
 say "Ставлю Claude Code"
-asuser '[ -x ~/.local/bin/claude ] || curl -fsSL https://claude.ai/install.sh | bash'
-asuser '~/.local/bin/claude --version'
+asuser '
+  { [ -x ~/.local/bin/claude ] || [ -x ~/.bun/bin/claude ]; } && exit 0
+  for url in https://claude.ai/install.sh https://downloads.claude.ai/claude-code-releases/bootstrap.sh; do
+    curl -fsSL --max-time 60 "$url" -o /tmp/claude-install.sh && bash /tmp/claude-install.sh && exit 0
+  done
+  echo "Официальный установщик недоступен, ставлю Claude Code через npm-пакет"
+  ~/.bun/bin/bun add -g @anthropic-ai/claude-code
+'
+asuser 'PATH="$HOME/.local/bin:$HOME/.bun/bin:$PATH" claude --version' || die "Не удалось установить Claude Code"
 
 # --- 3. Распознавание голосовых (faster-whisper) ---------------------------
 say "Ставлю распознавание речи (faster-whisper)"
